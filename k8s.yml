@@ -1,0 +1,96 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tracker
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: tracker
+  name: redis
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:5.0.7
+          command:
+            - redis-server
+            - --appendonly
+            - 'yes'
+          ports:
+            - name: redis
+              containerPort: 6379
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: tracker
+  name: redis
+  labels:
+    app: redis
+spec:
+  ports:
+    - port: 6379
+      name: redis
+  selector:
+    app: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: tracker
+  name: tracker
+
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tracker
+  template:
+    metadata:
+      labels:
+        app: tracker
+    spec:
+      containers:
+        - name: tracker
+          image: huntprod/genesis-tracker:latest
+          imagePullPolicy: Always
+          env:
+            - name:  REDIS
+              value: "redis://redis.tracker.svc:6379"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: tracker
+  name: tracker
+  labels:
+    app: tracker
+spec:
+  ports:
+    - port: 3000
+      name: tracker
+  selector:
+    app: tracker

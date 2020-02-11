@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+LICENSE
+README.md
+/.git
+/.gitignore
+/.dockerignore
+/Dockerfile
